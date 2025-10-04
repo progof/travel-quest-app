@@ -5,6 +5,6 @@ import QuestList from "~/components/QuestList.vue";
 
 <template>
   <MainLayout>
-    <Map />
+    <QuestList />
   </MainLayout>
 </template>

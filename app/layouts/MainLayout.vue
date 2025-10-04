@@ -6,7 +6,7 @@ import MobileIslandMenu from "~/layouts/MobileIslandMenu.vue";
 <template>
   <div class="flex flex-col h-screen bg-gray-100 overflow-hidden">
     <header
-      class="p-4 bg-gray-900 text-white flex justify-between items-center shadow-md"
+      class="px-6 py-3 bg-gray-900 text-white flex justify-between items-center shadow-md"
     >
       <h1 class="text-lg font-semibold items-center">
         <TargetIcon class="inline size-6 mr-1" /> Travel Quest

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
+import { quest } from "#shared/quest";
 
 const router = useRouter();
 
@@ -48,6 +49,7 @@ const result = ref<{
 	location_index: number;
 	confidence: "high" | "medium" | "low";
 } | null>(null);
+const isLoading = ref(false);
 const takePhoto = async () => {
 	if (!videoRef.value || !photoRef.value) return;
 
@@ -77,13 +79,21 @@ const takePhoto = async () => {
 				log("❌ Failed to create image blob");
 				return;
 			}
-			const data = new FormData();
-			data.append("image", blob, "photo.png");
 
-			result.value = await $fetch("/api/match", {
-				method: "POST",
-				body: data,
-			});
+			isLoading.value = true;
+			try {
+				const data = new FormData();
+				data.append("image", blob, "photo.png");
+
+				result.value = await $fetch("/api/match", {
+					method: "POST",
+					body: data,
+				});
+			} catch (matchErr: any) {
+				log("❌ Error matching image: " + matchErr.message);
+			} finally {
+				isLoading.value = false;
+			}
 		}, "image/png");
 	} catch (err: any) {
 		log("❌ Error reading photo data: " + err.message);
@@ -100,7 +110,9 @@ onBeforeUnmount(() => stopCamera());
 </script>
 
 <template>
-	<div class="relative w-full h-screen bg-black flex flex-col overflow-hidden">
+	<div
+		class="relative w-full h-screen bg-black flex flex-col overflow-auto md:overflow-hidden"
+	>
 		<!-- Back button -->
 		<button
 			@click="goBack"
@@ -158,25 +170,45 @@ onBeforeUnmount(() => stopCamera());
 			</div>
 		</transition>
 
+		<!-- Loading state -->
+		<transition name="fade">
+			<div
+				v-if="isLoading"
+				class="absolute inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center"
+			>
+				<div
+					class="bg-white/90 backdrop-blur-md rounded-lg p-6 text-center shadow-xl"
+				>
+					<div
+						class="animate-spin w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"
+					></div>
+					<p class="text-gray-800 font-medium">Analyzing image...</p>
+					<p class="text-gray-600 text-sm mt-1">Looking for matches</p>
+				</div>
+			</div>
+		</transition>
+
 		<!-- Match result display -->
 		<transition name="slide-up">
 			<div
-				v-if="result"
+				v-if="result && result.location_index >= 0"
 				class="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-lg p-4 shadow-lg border border-white/20 min-w-64 text-center"
 			>
 				<h3 class="text-lg font-bold text-gray-800 mb-2">🎯 Match Found!</h3>
 				<div class="space-y-2">
 					<div class="text-gray-700">
-						<span class="font-medium">Location:</span> 
-						<span class="text-blue-600">#{{ result.location_index }}</span>
+						<span class="font-medium">Location:</span>
+						<span class="text-blue-600">
+							{{ quest[result.location_index]!.name }}
+						</span>
 					</div>
 					<div class="text-gray-700">
 						<span class="font-medium">Confidence:</span>
-						<span 
+						<span
 							:class="{
 								'text-green-600': result.confidence === 'high',
-								'text-yellow-600': result.confidence === 'medium', 
-								'text-orange-600': result.confidence === 'low'
+								'text-yellow-600': result.confidence === 'medium',
+								'text-orange-600': result.confidence === 'low',
 							}"
 							class="font-semibold capitalize ml-1"
 						>
@@ -190,6 +222,24 @@ onBeforeUnmount(() => stopCamera());
 				>
 					✕ Dismiss
 				</button>
+			</div>
+			<div v-else-if="result && result.location_index === -1">
+				<div
+					class="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-lg p-4 shadow-lg border border-white/20 min-w-64 text-center"
+				>
+					<h3 class="text-lg font-bold text-gray-800 mb-2">
+						❓ No Match Found
+					</h3>
+					<div class="text-gray-700">
+						Sorry, we couldn't identify this location. Please try again.
+					</div>
+					<button
+						@click="result = null"
+						class="mt-3 text-sm text-gray-500 hover:text-gray-700 transition"
+					>
+						✕ Dismiss
+					</button>
+				</div>
 			</div>
 		</transition>
 

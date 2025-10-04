@@ -1,23 +1,27 @@
 {
-  "name": "nuxt-app",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
-  },
-  "dependencies": {
-    "nuxt": "^4.1.2",
-    "vue": "^3.5.22",
-    "vue-router": "^4.5.1"
-  },
-  "packageManager": "pnpm@10.17.1+sha512.17c560fca4867ae9473a3899ad84a88334914f379be46d455cbf92e5cf4b39d34985d452d2583baf19967fa76cb5c17bc9e245529d0b98745721aa7200ecaf7a",
-  "devDependencies": {
-    "@nuxtjs/tailwindcss": "^6.14.0",
-    "@tailwindcss/vite": "^4.1.14",
-    "tailwindcss": "^4.1.14"
-  }
+	"name": "nuxt-app",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"build": "nuxt build",
+		"dev": "nuxt dev",
+		"generate": "nuxt generate",
+		"preview": "nuxt preview",
+		"postinstall": "nuxt prepare",
+		"gen-desc": "node --experimental-strip-types ./generate-description.ts"
+	},
+	"dependencies": {
+		"nuxt": "^4.1.2",
+		"vue": "^3.5.22",
+		"openai": "6.1.0",
+		"vue-router": "^4.5.1",
+		"dotenv": "17.2.3"
+	},
+	"packageManager": "pnpm@10.17.1+sha512.17c560fca4867ae9473a3899ad84a88334914f379be46d455cbf92e5cf4b39d34985d452d2583baf19967fa76cb5c17bc9e245529d0b98745721aa7200ecaf7a",
+	"devDependencies": {
+		"@nuxtjs/tailwindcss": "^6.14.0",
+		"@tailwindcss/vite": "^4.1.14",
+		"tailwindcss": "^4.1.14",
+		"@types/node": "22"
+	}
 }

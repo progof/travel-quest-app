@@ -4,7 +4,7 @@ import { createReadStream } from "node:fs";
 import path from "node:path";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { quest } from "./shared/quest";
+import { quest } from "#shared/quest";
 
 const openai = new OpenAI({
 	apiKey:

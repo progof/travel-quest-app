@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { quest } from "../../shared/quest";
+import { quest } from "#shared/quest";
 import { useRouter } from "vue-router";
 import MapPointIcon from "~/assets/icons/map-point.svg";
 

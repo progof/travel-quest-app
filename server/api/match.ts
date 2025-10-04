@@ -1,4 +1,4 @@
-import { matchUserImage } from "../../match-user-image";
+import { matchUserImage } from "../match-user-image";
 
 export default defineEventHandler(async (event) => {
 	if (event.method !== "POST") {

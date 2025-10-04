@@ -1,0 +1,160 @@
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
+const videoRef = ref<HTMLVideoElement | null>(null);
+const photoRef = ref<HTMLCanvasElement | null>(null);
+const stream = ref<MediaStream | null>(null);
+const photoData = ref<string | null>(null);
+const diagnostics = ref<string[]>([]);
+const usingFrontCamera = ref(false);
+
+const log = (m: string) => {
+  diagnostics.value.push(`[${new Date().toLocaleTimeString()}] ${m}`);
+  console.log("📋", m);
+};
+
+const startCamera = async () => {
+  try {
+    stream.value = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: usingFrontCamera.value ? "user" : "environment" },
+    });
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream.value;
+      await videoRef.value.play();
+    }
+    log("🎥 Camera started");
+  } catch (err: any) {
+    log("❌ Camera error: " + err.message);
+  }
+};
+
+const stopCamera = () => {
+  stream.value?.getTracks().forEach((t) => t.stop());
+  stream.value = null;
+  log("⏹️ Camera stopped");
+};
+
+const switchCamera = async () => {
+  stopCamera();
+  usingFrontCamera.value = !usingFrontCamera.value;
+  await startCamera();
+  log("🔄 Switched camera");
+};
+
+const takePhoto = async () => {
+  if (!videoRef.value || !photoRef.value) return;
+
+  const width = videoRef.value.videoWidth;
+  const height = videoRef.value.videoHeight;
+
+  if (!width || !height) {
+    log("❌ Video not ready");
+    return;
+  }
+
+  const ctx = photoRef.value.getContext("2d");
+  if (!ctx) return;
+
+  photoRef.value.width = width;
+  photoRef.value.height = height;
+  ctx.drawImage(videoRef.value, 0, 0, width, height);
+  photoData.value = photoRef.value.toDataURL("image/png");
+
+  log("📷 Photo captured");
+  await nextTick();
+};
+
+const goBack = () => {
+  stopCamera();
+  router.push({ name: "index" });
+};
+
+onMounted(() => startCamera());
+onBeforeUnmount(() => stopCamera());
+</script>
+
+<template>
+  <div class="relative w-full h-screen bg-black flex flex-col overflow-hidden">
+    <!-- Back button -->
+    <button
+      @click="goBack"
+      class="absolute top-6 left-4 z-50 bg-white/20 text-white px-3 py-1 rounded-xl backdrop-blur-md hover:bg-white/30 transition"
+    >
+      ⬅️ Back
+    </button>
+
+    <!-- Video feed -->
+    <video
+      ref="videoRef"
+      class="absolute inset-0 w-full h-full object-cover"
+      autoplay
+      playsinline
+    ></video>
+
+    <!-- Gradient overlay for visibility -->
+    <div
+      class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 to-transparent"
+    ></div>
+
+    <!-- Capture button -->
+    <div
+      class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex items-center gap-6"
+    >
+      <button
+        @click="switchCamera"
+        class="bg-white/20 text-white text-2xl p-4 rounded-full backdrop-blur-md hover:bg-white/30 transition"
+      >
+        🔄
+      </button>
+
+      <button
+        @click="takePhoto"
+        class="w-20 h-20 rounded-full bg-green-500 border-4 border-white shadow-lg text-white text-2xl active:scale-95 transition"
+      >
+        📸
+      </button>
+
+      <button
+        @click="stopCamera"
+        class="bg-white/20 text-white text-2xl p-4 rounded-full backdrop-blur-md hover:bg-white/30 transition"
+      >
+        ⏹️
+      </button>
+    </div>
+
+    <!-- Photo preview (thumbnail) -->
+    <transition name="fade">
+      <div
+        v-if="photoData"
+        class="absolute top-6 right-6 w-20 h-20 border-2 border-white rounded-lg overflow-hidden shadow-md"
+      >
+        <img :src="photoData" class="object-cover w-full h-full" />
+      </div>
+    </transition>
+
+    <!-- Hidden canvas -->
+    <canvas ref="photoRef" class="hidden"></canvas>
+
+    <!-- Diagnostics (debug mode) -->
+    <div
+      v-if="diagnostics.length"
+      class="absolute top-0 left-0 bg-black/50 text-white text-xs p-2 max-h-32 overflow-y-auto rounded-br-lg"
+    >
+      <div v-for="(msg, i) in diagnostics" :key="i">{{ msg }}</div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

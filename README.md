@@ -1,6 +1,6 @@
-# Go on a Mini Adventure! 🗺️✨
+# Go on a Travel Quest! 🗺️✨
 
-Welcome to **Mini Adventure** — a fun, interactive app that lets you explore locations on a map and complete exciting quests!  
+Welcome to **Travel Quest** — a fun, interactive app that lets you explore locations on a map and complete exciting quests!  
 
 This app was featured in our **HackYeah demo**: follow the clues, discover hidden spots at the conference, and earn collectible stickers once you find them all.  
 
@@ -46,4 +46,4 @@ This app was featured in our **HackYeah demo**: follow the clues, discover hidde
 
 1. Clone the repository:  
    ```bash
-   git clone https://github.com/yourusername/mini-adventure.git
+   git clone https://github.com/progof/travel-quest-app.git

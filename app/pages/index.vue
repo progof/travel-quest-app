@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import MainLayout from "~/layouts/MainLayout.vue";
-import QuestList from "~/components/QuestList.vue";
+import Map from "~/components/map.vue";
 </script>
 
 <template>

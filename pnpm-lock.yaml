@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@types/leaflet':
-        specifier: ^1.9.20
-        version: 1.9.20
       dotenv:
         specifier: 17.2.3
         version: 17.2.3
@@ -22,7 +19,7 @@ importers:
         version: 4.1.2(@parcel/watcher@2.5.1)(@types/node@22.18.8)(@vue/compiler-sfc@3.5.22)(db0@0.3.4)(ioredis@5.8.0)(lightningcss@1.30.1)(magicast@0.3.5)(rollup@4.52.4)(terser@5.44.0)(vite@7.1.9(@types/node@22.18.8)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))(yaml@2.8.1)
       openai:
         specifier: 6.1.0
-        version: 6.1.0(ws@8.18.3)
+        version: 6.1.0(ws@8.18.3)(zod@3.25.76)
       vite-svg-loader:
         specifier: ^5.1.0
         version: 5.1.0(vue@3.5.22)
@@ -32,6 +29,9 @@ importers:
       vue-router:
         specifier: ^4.5.1
         version: 4.5.1(vue@3.5.22)
+      zod:
+        specifier: '3'
+        version: 3.25.76
     devDependencies:
       '@nuxtjs/tailwindcss':
         specifier: ^6.14.0
@@ -39,6 +39,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.14
         version: 4.1.14(vite@7.1.9(@types/node@22.18.8)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))
+      '@types/leaflet':
+        specifier: ^1.9.20
+        version: 1.9.20
       '@types/node':
         specifier: '22'
         version: 22.18.8
@@ -3727,6 +3730,9 @@ packages:
     resolution: {integrity: sha512-zK7YHHz4ZXpW89AHXUPbQVGKI7uvkd3hzusTdotCg1UxyaVtg0zFJSTfW/Dq5f7OBBVnq6cZIaC8Ti4hb6dtCA==}
     engines: {node: '>= 14'}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -6522,9 +6528,10 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
-  openai@6.1.0(ws@8.18.3):
+  openai@6.1.0(ws@8.18.3)(zod@3.25.76):
     optionalDependencies:
       ws: 8.18.3
+      zod: 3.25.76
 
   oxc-minify@0.87.0:
     optionalDependencies:
@@ -7644,3 +7651,5 @@ snapshots:
       archiver-utils: 5.0.2
       compress-commons: 6.0.2
       readable-stream: 4.7.0
+
+  zod@3.25.76: {}

@@ -65,6 +65,25 @@ const takePhoto = async () => {
 
   log("📷 Photo captured");
   await nextTick();
+
+	try {
+		// Use toBlob to get a real PNG file
+		photoRef.value.toBlob(async (blob) => {
+			if (!blob) {
+				log("❌ Failed to create image blob");
+				return;
+			}
+			const data = new FormData();
+			data.append("image", blob, "photo.png");
+
+			await $fetch("/api/match", {
+				method: "POST",
+				body: data,
+			});
+		}, "image/png");
+	} catch (err: any) {
+		log("❌ Error reading photo data: " + err.message);
+	}
 };
 
 const goBack = () => {

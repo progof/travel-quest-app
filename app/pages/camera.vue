@@ -2,9 +2,11 @@
 import { nextTick, watchEffect, ref } from "vue";
 import { useRouter } from "vue-router";
 import { questLocations } from "#shared/quest";
-import { useLocalStorage, useUserMedia } from "@vueuse/core";
+import { useUserMedia } from "@vueuse/core";
 import { useMutation } from "@tanstack/vue-query";
 import { useImageStorage } from "~/composables/useImageStorage";
+import CompasIcon from "~/assets/icons/compass.svg?component";
+import StarIcon from "~/assets/icons/star.svg?component";
 
 const router = useRouter();
 
@@ -52,6 +54,7 @@ const toggleFacingMode = async () => {
 };
 
 const foundLocations = useFoundLocations();
+const showResultOverlay = ref(false);
 const {
 	mutate: matchLocation,
 	isPending,
@@ -110,10 +113,10 @@ const {
 		}
 
 		// Clear captured image after successful match
-		setTimeout(() => {
-			capturedImageData.value = null;
-			currentImageBlob.value = null;
-		}, 3000); // Show result for 3 seconds before clearing
+		// setTimeout(() => {
+		// 	capturedImageData.value = null;
+		// 	currentImageBlob.value = null;
+		// }, 3000); // Show result for 3 seconds before clearing
 	},
 	onError: async () => {
 		// Store image even on error for debugging purposes
@@ -129,10 +132,13 @@ const {
 		}
 
 		// Clear captured image after error
-		setTimeout(() => {
-			capturedImageData.value = null;
-			currentImageBlob.value = null;
-		}, 3000); // Show error for 3 seconds before clearing
+		// setTimeout(() => {
+		// 	capturedImageData.value = null;
+		// 	currentImageBlob.value = null;
+		// }, 3000); // Show error for 3 seconds before clearing
+	},
+	onSettled: () => {
+		showResultOverlay.value = true;
 	},
 });
 
@@ -172,8 +178,6 @@ const goBack = () => {
 	<div
 		class="relative w-full h-screen bg-black flex flex-col overflow-auto md:overflow-hidden"
 	>
-
-
 		<video
 			ref="videoRef"
 			class="absolute inset-0 w-full h-full object-cover"
@@ -198,9 +202,7 @@ const goBack = () => {
 			@click="goBack"
 			class="absolute bottom-10 left-6 z-50 bg-white/10 text-white p-4 rounded-full backdrop-blur-md hover:bg-white/20 hover:text-white transition"
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="w-6 h-6">
-				<path fill="currentColor" d="m15 19l-6-2.11V5l6 2.11M20.5 3h-.16L15 5.1L9 3L3.36 4.9c-.21.07-.36.25-.36.48V20.5a.5.5 0 0 0 .5.5c.05 0 .11 0 .16-.03L9 18.9l6 2.1l5.64-1.9c.21-.1.36-.25.36-.48V3.5a.5.5 0 0 0-.5-.5" />
-			</svg>
+			<CompasIcon class="w-6 h-6" />
 		</button>
 
 		<button
@@ -284,34 +286,75 @@ const goBack = () => {
 			</div>
 		</transition>
 
-		<transition name="slide-up">
-			<div
-				v-if="matchResult"
-				class="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-lg p-4 shadow-lg border border-white/20 min-w-64 text-center"
-			>
-				<h3 class="text-lg font-bold text-gray-800 mb-2">🎯 Match Found!</h3>
-				<div class="space-y-2">
-					<div class="text-gray-700">
-						<span class="font-medium">Location:</span>
-						<span class="text-blue-600">
-							{{ matchResult.name }}
-						</span>
-					</div>
-				</div>
-			</div>
-			<div v-else-if="matchError">
+		<div
+			class="fixed inset-0 w-full h-screen flex items-center justify-center pointer-events-none"
+		>
+			<transition name="fade">
 				<div
-					class="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-lg p-4 shadow-lg border border-white/20 min-w-64 text-center"
-				>
-					<h3 class="text-lg font-bold text-gray-800 mb-1.5">
-						❓ No Match Found
-					</h3>
-					<div class="text-gray-700">
-						Sorry, we couldn't identify this location. Please try again.
+					v-if="showResultOverlay"
+					class="bg-black/50 backdrop-blur-2xl fixed w-full h-screen pointer-events-auto z-10"
+					@click="showResultOverlay = false"
+				></div>
+			</transition>
+			<div class="p-5 z-50 w-full">
+				<transition name="slide-up">
+					<div
+						v-if="showResultOverlay && matchResult"
+						class="flex flex-col w-full items-center justify-center gap-5"
+					>
+						<div v-if="capturedImageData" class="relative">
+							<StarIcon
+								class="absolute -top-4 -right-4 rotate-12 w-12 h-12 shrink-0 drop-shadow-lg"
+							/>
+							<img
+								:src="capturedImageData"
+								class="w-48 h-48 object-cover rounded-xl border-[6px] border-white shadow-2xl"
+								alt="Captured photo"
+							/>
+						</div>
+						<div
+							class="bg-[#E2DECD] rounded-xl p-5 flex flex-col shadow-lg w-full text-center pointer-events-auto"
+							:style="{
+								boxShadow:
+									'inset 0px 4px 6px rgba(0, 0, 0, 0.1), 0px 2px 0px #3C3A2D',
+							}"
+						>
+							<h3 class="text-[19px] font-bold text-black mb-1">MATCH FOUND</h3>
+							<div
+								class="text-gray-700 text-pretty font-semibold leading-[1.25]"
+							>
+								{{ matchResult.name }}
+							</div>
+						</div>
 					</div>
-				</div>
+					<div
+						v-else-if="showResultOverlay && matchError"
+						class="bg-[#E2DECD] rounded-xl p-5 flex flex-col shadow-lg w-full text-center pointer-events-auto"
+						:style="{
+							boxShadow:
+								'inset 0px 4px 6px rgba(0, 0, 0, 0.1), 0px 2px 0px #3C3A2D',
+						}"
+					>
+						<h3 class="text-[19px] font-bold text-black mb-1.5">
+							NO MATCH FOUND
+						</h3>
+						<div class="text-gray-700 text-pretty font-semibold leading-[1.25]">
+							Sorry, we couldn't identify this location. Please try again.
+						</div>
+						<button
+							type="button"
+							@click=""
+							class="mt-4 bg-[#AF9F78] border border-white/25 rounded-xl text-white font-bold text-base items-center justify-center h-11 w-full px-4 gap-2"
+							:style="{
+								boxShadow: '0px 2px 0px #90815D',
+							}"
+						>
+							CONTINUE SCANNING
+						</button>
+					</div>
+				</transition>
 			</div>
-		</transition>
+		</div>
 
 		<!-- Hidden canvas -->
 		<canvas ref="photoRef" class="hidden"></canvas>
@@ -334,11 +377,11 @@ const goBack = () => {
 }
 .slide-up-enter-from {
 	opacity: 0;
-	transform: translateY(20px) translateX(-50%);
+	transform: translateY(15%);
 }
 .slide-up-leave-to {
 	opacity: 0;
-	transform: translateY(-20px) translateX(-50%);
+	transform: translateY(15%);
 }
 
 .laser-scanner {

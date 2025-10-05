@@ -1,6 +1,6 @@
-import { useLocalStorage } from "@vueuse/core";
+import { useLocalStorage, createSharedComposable } from "@vueuse/core";
 
-export const useFoundLocations = () => {
+export const useFoundLocations = createSharedComposable(() => {
 	return useLocalStorage<
 		Array<{
 			index: number;
@@ -13,4 +13,4 @@ export const useFoundLocations = () => {
 			write: (v) => JSON.stringify(v),
 		},
 	});
-};
+});

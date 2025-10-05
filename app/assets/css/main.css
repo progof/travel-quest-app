@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+/* Set Rajdhani as default font */
+body {
+	font-family: "Rajdhani", sans-serif;
+}

@@ -1,14 +1,10 @@
 import { OpenAI } from "openai";
-import { readFile, writeFile } from "node:fs/promises";
-import { createReadStream } from "node:fs";
-import path from "node:path";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { questLocations } from "#shared/quest";
 
 const openai = new OpenAI({
-	apiKey:
-		"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",
+	apiKey: process.env.OPENAI_API_KEY,
 });
 
 // const UPLOADED_IMAGE_IDS_PATH = "./images.json";
@@ -56,7 +52,7 @@ interface MatchResult {
 export async function matchUserImage(base64File: string) {
 	const locations = questLocations.map((location) => ({
 		name: location.name,
-		description: location.description,
+		description: location.hint,
 	}));
 
 	const response = await openai.responses.create({

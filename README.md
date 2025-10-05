@@ -35,15 +35,29 @@ This app was featured in our **HackYeah demo**: follow the clues, discover hidde
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** Mobile/Web app interface  
-- **Backend:** API for quests and map data  
-- **Map Integration:** Real-time interactive map  
-- **Rewards System:** Track progress and collectible stickers  
+- **Framework:** [Nuxt 4](https://nuxt.com) (Vue 3, Vite)  
+- **Language:** TypeScript  
+- **Styling:** TailwindCSS  
 
 ---
 
-## 🚀 Getting Started
+## ⚙️ Technical Setup
 
-1. Clone the repository:  
-   ```bash
-   git clone https://github.com/progof/travel-quest-app.git
+### 1. Prerequisites
+
+Make sure you have the following installed:
+
+- [Node.js](https://nodejs.org/) **v20+**
+- [pnpm](https://pnpm.io/) or [npm](https://www.npmjs.com/)
+- Git
+
+---
+
+### 2. Clone the repository
+
+```bash
+git clone https://github.com/progof/travel-quest-app.git
+cd travel-quest-app
+pnpm i
+pnpm run dev
+```

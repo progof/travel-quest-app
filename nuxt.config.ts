@@ -5,11 +5,6 @@ export default defineNuxtConfig({
 	compatibilityDate: "2025-07-15",
 	devtools: { enabled: false },
 	css: ["~/assets/css/main.css"],
-	runtimeConfig: {
-		app: {
-			apiKey: process.env.OPENAI_API_KEY,
-		},
-	},
 	modules: [
 		[
 			"@nuxtjs/google-fonts",

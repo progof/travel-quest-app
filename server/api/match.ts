@@ -16,6 +16,11 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
+		// return {
+		// 	location_index: 0,
+		// 	confidence: "high",
+		// };
+
 		// Find the image file in the form data
 		const imageFile = formData.find(
 			(field) => field.name === "image" && field.filename && field.data

@@ -4,7 +4,7 @@ import { createReadStream } from "node:fs";
 import path from "node:path";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { quest } from "#shared/quest";
+import { questLocations } from "#shared/quest";
 
 const openai = new OpenAI({
 	apiKey:
@@ -54,7 +54,7 @@ interface MatchResult {
 }
 
 export async function matchUserImage(base64File: string) {
-	const locations = quest.map((location) => ({
+	const locations = questLocations.map((location) => ({
 		name: location.name,
 		description: location.description,
 	}));

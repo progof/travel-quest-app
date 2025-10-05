@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { quest } from "#shared/quest";
+import { questLocations } from "#shared/quest";
 import QuestItem from "~/components/QuestItem.vue";
 
 const router = useRouter();
@@ -22,7 +22,7 @@ const openCamera = (item: QuestItemType) => {
 	<div class="flex-1 p-4 overflow-y-auto">
 		<div class="flex flex-col md:grid md:grid-cols-3 gap-4">
 			<QuestItem
-				v-for="(item, index) in quest"
+				v-for="(item, index) in questLocations"
 				:key="index"
 				:item="item"
 				:onOpenCamera="openCamera"

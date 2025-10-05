@@ -1,280 +1,433 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { nextTick, watchEffect, ref } from "vue";
 import { useRouter } from "vue-router";
-import { quest } from "#shared/quest";
+import { questLocations } from "#shared/quest";
+import { useLocalStorage, useUserMedia } from "@vueuse/core";
+import { useMutation } from "@tanstack/vue-query";
+import { useImageStorage } from "~/composables/useImageStorage";
 
 const router = useRouter();
 
-const videoRef = ref<HTMLVideoElement | null>(null);
-const photoRef = ref<HTMLCanvasElement | null>(null);
-const stream = ref<MediaStream | null>(null);
-const photoData = ref<string | null>(null);
-const diagnostics = ref<string[]>([]);
-const usingFrontCamera = ref(false);
+const { constraints, stream } = useUserMedia({
+	constraints: {
+		video: {
+			facingMode: "environment",
+		},
+		audio: false,
+	},
+	enabled: true,
+});
 
-const log = (m: string) => {
-  diagnostics.value.push(`[${new Date().toLocaleTimeString()}] ${m}`);
-  console.log("📋", m);
+const videoRef = useTemplateRef("videoRef");
+const photoRef = useTemplateRef("photoRef");
+
+// Store captured image for overlay
+const capturedImageData = ref<string | null>(null);
+const currentImageBlob = ref<Blob | null>(null);
+
+// Initialize image storage
+const { storeImage, isSupported: isStorageSupported } = useImageStorage();
+
+watchEffect(() => {
+	if (videoRef.value && stream.value) {
+		videoRef.value.srcObject = stream.value;
+	}
+});
+
+const toggleFacingMode = async () => {
+	const facingMode =
+		typeof constraints.value?.video === "object"
+			? constraints.value.video.facingMode
+			: null;
+	const newValue = facingMode === "user" ? "environment" : "user";
+	constraints.value = {
+		...constraints.value,
+		video: {
+			...(typeof constraints.value?.video === "object"
+				? constraints.value.video
+				: {}),
+			facingMode: newValue,
+		},
+	};
 };
 
-const startCamera = async () => {
-  try {
-    stream.value = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: usingFrontCamera.value ? "user" : "environment" },
-    });
-    if (videoRef.value) {
-      videoRef.value.srcObject = stream.value;
-      await videoRef.value.play();
-    }
-    log("🎥 Camera started");
-  } catch (err: any) {
-    log("❌ Camera error: " + err.message);
-  }
-};
+const foundLocations = useFoundLocations();
+const {
+	mutate: matchLocation,
+	isPending,
+	data: matchResult,
+	error: matchError,
+} = useMutation({
+	mutationFn: async (blob: Blob) => {
+		const data = new FormData();
+		data.append("image", blob);
 
-const stopCamera = () => {
-  stream.value?.getTracks().forEach((t) => t.stop());
-  stream.value = null;
-  log("⏹️ Camera stopped");
-};
+		const result = await $fetch("/api/match", {
+			method: "POST",
+			body: data,
+		});
 
-const switchCamera = async () => {
-  stopCamera();
-  usingFrontCamera.value = !usingFrontCamera.value;
-  await startCamera();
-  log("🔄 Switched camera");
-};
+		if (result.location_index < 0 || result.confidence !== "high") {
+			throw new Error("No match found");
+		}
 
-const result = ref<{
-  location_index: number;
-  confidence: "high" | "medium" | "low";
-} | null>(null);
-const isLoading = ref(false);
+		const alreadyFound = foundLocations.value.find(
+			(loc) => loc.index === result.location_index
+		);
+
+		return {
+			index: result.location_index,
+			...questLocations[result.location_index]!,
+			status: alreadyFound ? "dublicate" : "new",
+		};
+	},
+	onSuccess: async (location) => {
+		if (
+			location.status === "new" &&
+			isStorageSupported.value &&
+			currentImageBlob.value
+		) {
+			try {
+				const imageId = await storeImage({
+					questIndex: location.index,
+					questName: location.name,
+					imageBlob: currentImageBlob.value,
+					matchResult: {
+						confidence: "high" as const,
+						locationIndex: location.index,
+						status: location.status,
+					},
+				});
+
+				foundLocations.value.push({
+					index: location.index,
+					date: new Date().toISOString(),
+					imageId,
+				});
+			} catch (error) {
+				console.error("Failed to store image:", error);
+			}
+		}
+
+		// Clear captured image after successful match
+		setTimeout(() => {
+			capturedImageData.value = null;
+			currentImageBlob.value = null;
+		}, 3000); // Show result for 3 seconds before clearing
+	},
+	onError: async () => {
+		// Store image even on error for debugging purposes
+		if (isStorageSupported.value && currentImageBlob.value) {
+			try {
+				await storeImage({
+					imageBlob: currentImageBlob.value,
+					notes: "No match found",
+				});
+			} catch (error) {
+				console.error("Failed to store image:", error);
+			}
+		}
+
+		// Clear captured image after error
+		setTimeout(() => {
+			capturedImageData.value = null;
+			currentImageBlob.value = null;
+		}, 3000); // Show error for 3 seconds before clearing
+	},
+});
+
 const takePhoto = async () => {
-  if (!videoRef.value || !photoRef.value) return;
+	if (!videoRef.value || !photoRef.value) return;
 
-  const width = videoRef.value.videoWidth;
-  const height = videoRef.value.videoHeight;
+	const width = videoRef.value.videoWidth;
+	const height = videoRef.value.videoHeight;
+	const ctx = photoRef.value.getContext("2d");
+	if (!ctx) return;
 
-  if (!width || !height) {
-    log("❌ Video not ready");
-    return;
-  }
+	photoRef.value.width = width;
+	photoRef.value.height = height;
+	ctx.drawImage(videoRef.value, 0, 0, width, height);
+	await nextTick();
+	capturedImageData.value = photoRef.value.toDataURL("image/webp");
+	await nextTick();
 
-  const ctx = photoRef.value.getContext("2d");
-  if (!ctx) return;
-
-  photoRef.value.width = width;
-  photoRef.value.height = height;
-  ctx.drawImage(videoRef.value, 0, 0, width, height);
-  photoData.value = photoRef.value.toDataURL("image/png");
-
-  log("📷 Photo captured");
-  await nextTick();
-
-  try {
-    // Use toBlob to get a real PNG file
-    photoRef.value.toBlob(async (blob) => {
-      if (!blob) {
-        log("❌ Failed to create image blob");
-        return;
-      }
-
-      isLoading.value = true;
-      try {
-        const data = new FormData();
-        data.append("image", blob, "photo.png");
-
-        result.value = await $fetch("/api/match", {
-          method: "POST",
-          body: data,
-        });
-      } catch (matchErr: any) {
-        log("❌ Error matching image: " + matchErr.message);
-      } finally {
-        isLoading.value = false;
-      }
-    }, "image/png");
-  } catch (err: any) {
-    log("❌ Error reading photo data: " + err.message);
-  }
+	photoRef.value.toBlob(
+		(blob) => {
+			if (!blob) return;
+			// Store blob for IndexedDB storage
+			currentImageBlob.value = blob;
+			matchLocation(blob);
+		},
+		"image/webp",
+		0.75
+	);
 };
 
 const goBack = () => {
-  stopCamera();
-  router.push({ name: "index" });
+	router.push({ name: "index" });
 };
-
-onMounted(() => startCamera());
-onBeforeUnmount(() => stopCamera());
 </script>
 
 <template>
-  <div
-    class="relative w-full h-screen bg-black flex flex-col overflow-auto md:overflow-hidden"
-  >
-    <!-- Back button -->
-    <button
-      @click="goBack"
-      class="absolute top-6 left-4 z-50 bg-white/20 text-white px-3 py-1 rounded-xl backdrop-blur-md hover:bg-white/30 transition"
-    >
-      ⬅️ Back
-    </button>
+	<div
+		class="relative w-full h-screen bg-black flex flex-col overflow-auto md:overflow-hidden"
+	>
 
-    <!-- Video feed -->
-    <video
-      ref="videoRef"
-      class="absolute inset-0 w-full h-full object-cover"
-      autoplay
-      playsinline
-    ></video>
 
-    <!-- Gradient overlay for visibility -->
-    <div
-      class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 to-transparent"
-    ></div>
+		<video
+			ref="videoRef"
+			class="absolute inset-0 w-full h-full object-cover"
+			autoplay
+			playsinline
+		></video>
 
-    <div
-      class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex items-center gap-6"
-    >
-      <button
-        @click="switchCamera"
-        class="bg-white/20 text-white text-2xl p-4 rounded-full backdrop-blur-md hover:bg-white/30 transition"
-      >
-        🔄
-      </button>
+		<div
+			class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 to-transparent"
+		></div>
 
-      <button
-        @click="takePhoto"
-        class="w-20 h-20 rounded-full bg-green-500 border-4 border-white shadow-lg text-white text-2xl active:scale-95 transition"
-      >
-        📸
-      </button>
+		<div
+			class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex items-center justify-center"
+		>
+			<button
+				@click="takePhoto"
+				class="w-16 h-16 rounded-full bg-white shadow-lg text-white text-2xl active:scale-95 transition ring-4 ring-white ring-offset-[3px] ring-offset-black"
+			></button>
+		</div>
 
-      <button
-        @click="stopCamera"
-        class="bg-white/20 text-white text-2xl p-4 rounded-full backdrop-blur-md hover:bg-white/30 transition"
-      >
-        ⏹️
-      </button>
-    </div>
+		<button
+			@click="goBack"
+			class="absolute bottom-10 left-6 z-50 bg-white/10 text-white p-4 rounded-full backdrop-blur-md hover:bg-white/20 hover:text-white transition"
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="w-6 h-6">
+				<path fill="currentColor" d="m15 19l-6-2.11V5l6 2.11M20.5 3h-.16L15 5.1L9 3L3.36 4.9c-.21.07-.36.25-.36.48V20.5a.5.5 0 0 0 .5.5c.05 0 .11 0 .16-.03L9 18.9l6 2.1l5.64-1.9c.21-.1.36-.25.36-.48V3.5a.5.5 0 0 0-.5-.5" />
+			</svg>
+		</button>
 
-    <!-- Photo preview (thumbnail) -->
-    <transition name="fade">
-      <div
-        v-if="photoData"
-        class="absolute top-6 right-6 w-20 h-20 border-2 border-white rounded-lg overflow-hidden shadow-md"
-      >
-        <img :src="photoData" class="object-cover w-full h-full" />
-      </div>
-    </transition>
+		<button
+			@click="toggleFacingMode"
+			class="absolute bottom-10 right-6 z-50 bg-white/10 text-white p-4 rounded-full backdrop-blur-md hover:bg-white/20 hover:text-white transition"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="20"
+				height="20"
+				viewBox="0 0 24 24"
+				class="w-6 h-6"
+			>
+				<path
+					fill="none"
+					stroke="currentColor"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4m-4 4a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"
+				/>
+			</svg>
+		</button>
 
-    <!-- Loading state -->
-    <transition name="fade">
-      <div
-        v-if="isLoading"
-        class="absolute inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center"
-      >
-        <div
-          class="bg-white/90 backdrop-blur-md rounded-lg p-6 text-center shadow-xl"
-        >
-          <div
-            class="animate-spin w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"
-          ></div>
-          <p class="text-gray-800 font-medium">Analyzing image...</p>
-          <p class="text-gray-600 text-sm mt-1">Looking for matches</p>
-        </div>
-      </div>
-    </transition>
+		<!-- Photo preview (thumbnail) -->
+		<!-- <transition name="fade">
+			<div
+				v-if="photoData"
+				class="absolute top-6 right-6 w-20 h-20 border-2 border-white rounded-lg overflow-hidden shadow-md"
+			>
+				<img :src="photoData" class="object-cover w-full h-full" />
+			</div>
+		</transition> -->
 
-    <!-- Match result display -->
-    <transition name="slide-up">
-      <div
-        v-if="result && result.location_index >= 0"
-        class="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-lg p-4 shadow-lg border border-white/20 min-w-64 text-center"
-      >
-        <h3 class="text-lg font-bold text-gray-800 mb-2">🎯 Match Found!</h3>
-        <div class="space-y-2">
-          <div class="text-gray-700">
-            <span class="font-medium">Location:</span>
-            <span class="text-blue-600">
-              {{ quest[result.location_index]!.name }}
-            </span>
-          </div>
-          <div class="text-gray-700">
-            <span class="font-medium">Confidence:</span>
-            <span
-              :class="{
-                'text-green-600': result.confidence === 'high',
-                'text-yellow-600': result.confidence === 'medium',
-                'text-orange-600': result.confidence === 'low',
-              }"
-              class="font-semibold capitalize ml-1"
-            >
-              {{ result.confidence }}
-            </span>
-          </div>
-        </div>
-        <button
-          @click="result = null"
-          class="mt-3 text-sm text-gray-500 hover:text-gray-700 transition"
-        >
-          ✕ Dismiss
-        </button>
-      </div>
-      <div v-else-if="result && result.location_index === -1">
-        <div
-          class="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-lg p-4 shadow-lg border border-white/20 min-w-64 text-center"
-        >
-          <h3 class="text-lg font-bold text-gray-800 mb-2">
-            ❓ No Match Found
-          </h3>
-          <div class="text-gray-700">
-            Sorry, we couldn't identify this location. Please try again.
-          </div>
-          <button
-            @click="result = null"
-            class="mt-3 text-sm text-gray-500 hover:text-gray-700 transition"
-          >
-            ✕ Dismiss
-          </button>
-        </div>
-      </div>
-    </transition>
+		<!-- Captured Image Overlay with Scanner Animation -->
+		<transition name="fade">
+			<div
+				v-if="isPending"
+				class="absolute inset-0 bg-black/70 backdrop-blur-sm z-40 flex flex-col items-center justify-center"
+			>
+				<!-- Captured Image Preview -->
+				<div
+					class="relative mb-6 rounded-lg overflow-hidden shadow-2xl border-2 border-white/30"
+				>
+					<div v-if="capturedImageData" class="relative">
+						<img
+							:src="capturedImageData"
+							class="w-64 h-48 object-cover"
+							alt="Captured photo"
+						/>
+					</div>
+					<div
+						v-else
+						class="w-64 h-48 bg-gray-800 flex items-center justify-center"
+					>
+						<p class="text-white/70">Processing image...</p>
+					</div>
 
-    <!-- Hidden canvas -->
-    <canvas ref="photoRef" class="hidden"></canvas>
+					<div class="absolute inset-0 laser-scanner">
+						<div class="scanner-corners">
+							<div class="corner corner-tl"></div>
+							<div class="corner corner-tr"></div>
+							<div class="corner corner-bl"></div>
+							<div class="corner corner-br"></div>
+						</div>
+						<div class="laser-line"></div>
+					</div>
+				</div>
 
-    <!-- Diagnostics (debug mode) -->
-    <div
-      v-if="diagnostics.length"
-      class="absolute top-0 left-0 bg-black/50 text-white text-xs p-2 max-h-32 overflow-y-auto rounded-br-lg"
-    >
-      <div v-for="(msg, i) in diagnostics" :key="i">{{ msg }}</div>
-    </div>
-  </div>
+				<div
+					class="bg-white/90 backdrop-blur-md rounded-lg p-4 text-center shadow-xl"
+				>
+					<div class="flex items-center justify-center gap-3 mb-2">
+						<div
+							class="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full"
+						></div>
+						<p class="text-gray-800 font-medium">Scanning for clues...</p>
+					</div>
+					<p class="text-gray-600 text-sm">Analyzing location details</p>
+				</div>
+			</div>
+		</transition>
+
+		<transition name="slide-up">
+			<div
+				v-if="matchResult"
+				class="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-lg p-4 shadow-lg border border-white/20 min-w-64 text-center"
+			>
+				<h3 class="text-lg font-bold text-gray-800 mb-2">🎯 Match Found!</h3>
+				<div class="space-y-2">
+					<div class="text-gray-700">
+						<span class="font-medium">Location:</span>
+						<span class="text-blue-600">
+							{{ matchResult.name }}
+						</span>
+					</div>
+				</div>
+			</div>
+			<div v-else-if="matchError">
+				<div
+					class="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-lg p-4 shadow-lg border border-white/20 min-w-64 text-center"
+				>
+					<h3 class="text-lg font-bold text-gray-800 mb-1.5">
+						❓ No Match Found
+					</h3>
+					<div class="text-gray-700">
+						Sorry, we couldn't identify this location. Please try again.
+					</div>
+				</div>
+			</div>
+		</transition>
+
+		<!-- Hidden canvas -->
+		<canvas ref="photoRef" class="hidden"></canvas>
+	</div>
 </template>
 
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.5s;
+	transition: opacity 0.5s;
 }
 .fade-enter-from,
 .fade-leave-to {
-  opacity: 0;
+	opacity: 0;
 }
 
 .slide-up-enter-active,
 .slide-up-leave-active {
-  transition: all 0.3s ease;
+	transition: all 0.3s ease;
 }
 .slide-up-enter-from {
-  opacity: 0;
-  transform: translateY(20px) translateX(-50%);
+	opacity: 0;
+	transform: translateY(20px) translateX(-50%);
 }
 .slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(-20px) translateX(-50%);
+	opacity: 0;
+	transform: translateY(-20px) translateX(-50%);
+}
+
+.laser-scanner {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	overflow: hidden;
+	z-index: 10;
+}
+
+.scanner-corners {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.corner {
+	position: absolute !important;
+	width: 24px;
+	height: 24px;
+	border: 3px solid #00bfff;
+	z-index: 20;
+}
+
+.corner-tl {
+	top: 0;
+	left: 0;
+	border-right: none;
+	border-bottom: none;
+	border-radius: 6px 0 0 0;
+}
+
+.corner-tr {
+	top: 0;
+	right: 0;
+	border-left: none;
+	border-bottom: none;
+	border-radius: 0 6px 0 0;
+}
+
+.corner-bl {
+	bottom: 0;
+	left: 0;
+	border-right: none;
+	border-top: none;
+	border-radius: 0 0 0 6px;
+}
+
+.corner-br {
+	bottom: 0;
+	right: 0;
+	border-left: none;
+	border-top: none;
+	border-radius: 0 0 6px 0;
+}
+
+.laser-line {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		#00bfff 50%,
+		transparent 100%
+	);
+	box-shadow: 0 0 15px #00bfff, 0 0 30px #00bfff, 0 0 45px #00bfff;
+	animation: laser-scan 2s ease-in-out infinite;
+	z-index: 25;
+}
+
+@keyframes laser-scan {
+	0% {
+		top: 10px;
+		opacity: 0;
+	}
+	10% {
+		opacity: 1;
+	}
+	90% {
+		opacity: 1;
+	}
+	100% {
+		top: calc(100% - 12px);
+		opacity: 0;
+	}
 }
 </style>

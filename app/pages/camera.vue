@@ -236,16 +236,6 @@ const goBack = () => {
 			</svg>
 		</button>
 
-		<!-- Photo preview (thumbnail) -->
-		<!-- <transition name="fade">
-			<div
-				v-if="photoData"
-				class="absolute top-6 right-6 w-20 h-20 border-2 border-white rounded-lg overflow-hidden shadow-md"
-			>
-				<img :src="photoData" class="object-cover w-full h-full" />
-			</div>
-		</transition> -->
-
 		<div
 			class="fixed inset-0 w-full h-screen flex items-center justify-center pointer-events-none"
 		>
@@ -262,47 +252,49 @@ const goBack = () => {
 				<transition name="slide-up">
 					<div
 						v-if="isPending"
-						class="absolute inset-0 bg-black/70 backdrop-blur-sm z-40 flex flex-col items-center justify-center"
+						class="absolute inset-0 flex flex-col items-center justify-center m-5"
 					>
 						<!-- Captured Image Preview -->
 						<div
-							class="relative mb-6 rounded-lg overflow-hidden shadow-2xl border-2 border-white/30"
+							class="relative mb-6 rounded-xl overflow-hidden shadow-2xl border-[6px] border-white"
 						>
 							<div v-if="capturedImageData" class="relative">
 								<img
 									:src="capturedImageData"
-									class="w-64 h-48 object-cover"
+									class="h-48 w-48 object-cover"
 									alt="Captured photo"
 								/>
 							</div>
 							<div
 								v-else
-								class="w-64 h-48 bg-gray-800 flex items-center justify-center"
+								class="w-full h-48 bg-gray-800 flex items-center justify-center"
 							>
 								<p class="text-white/70">Processing image...</p>
 							</div>
 
 							<div class="absolute inset-0 laser-scanner">
-								<div class="scanner-corners">
-									<div class="corner corner-tl"></div>
-									<div class="corner corner-tr"></div>
-									<div class="corner corner-bl"></div>
-									<div class="corner corner-br"></div>
-								</div>
 								<div class="laser-line"></div>
 							</div>
 						</div>
 
 						<div
-							class="bg-white/90 backdrop-blur-md rounded-lg p-4 text-center shadow-xl"
+							class="bg-[#E2DECD] rounded-xl p-5 flex flex-col shadow-lg w-full text-center pointer-events-auto"
+							:style="{
+								boxShadow:
+									'inset 0px 4px 6px rgba(0, 0, 0, 0.1), 0px 2px 0px #3C3A2D',
+							}"
 						>
-							<div class="flex items-center justify-center gap-3 mb-2">
+							<div class="flex items-center justify-center gap-2.5 mb-1.5">
 								<div
-									class="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full"
+									class="animate-spin w-[18px] h-[18px] border-2 border-[#3C3A2D] border-t-transparent rounded-full"
 								></div>
-								<p class="text-gray-800 font-medium">Scanning for clues...</p>
+								<p class="text-black font-semibold leading-[1.25]">
+									Scanning for clues...
+								</p>
 							</div>
-							<p class="text-gray-600 text-sm">Analyzing location details</p>
+							<p class="text-[#3C3A2D] text-sm font-medium leading-[1.25]">
+								Analyzing location details
+							</p>
 						</div>
 					</div>
 					<div
@@ -328,7 +320,7 @@ const goBack = () => {
 						>
 							<h3 class="text-[19px] font-bold text-black mb-1">MATCH FOUND</h3>
 							<div
-								class="text-gray-700 text-pretty font-semibold leading-[1.25]"
+								class="text-[#3C3A2D] text-pretty font-semibold leading-[1.25]"
 							>
 								{{ matchResult.name }}
 							</div>
@@ -401,52 +393,6 @@ const goBack = () => {
 	z-index: 10;
 }
 
-.scanner-corners {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-}
-
-.corner {
-	position: absolute !important;
-	width: 24px;
-	height: 24px;
-	border: 3px solid #00bfff;
-	z-index: 20;
-}
-
-.corner-tl {
-	top: 0;
-	left: 0;
-	border-right: none;
-	border-bottom: none;
-	border-radius: 6px 0 0 0;
-}
-
-.corner-tr {
-	top: 0;
-	right: 0;
-	border-left: none;
-	border-bottom: none;
-	border-radius: 0 6px 0 0;
-}
-
-.corner-bl {
-	bottom: 0;
-	left: 0;
-	border-right: none;
-	border-top: none;
-	border-radius: 0 0 0 6px;
-}
-
-.corner-br {
-	bottom: 0;
-	right: 0;
-	border-left: none;
-	border-top: none;
-	border-radius: 0 0 6px 0;
-}
-
 .laser-line {
 	position: absolute;
 	top: 0;
@@ -456,11 +402,11 @@ const goBack = () => {
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		#00bfff 50%,
+		white 50%,
 		transparent 100%
 	);
-	box-shadow: 0 0 15px #00bfff, 0 0 30px #00bfff, 0 0 45px #00bfff;
-	animation: laser-scan 2s ease-in-out infinite;
+	box-shadow: 0 0 15px white, 0 0 30px white, 0 0 45px white;
+	animation: laser-scan 1.5s ease infinite;
 	z-index: 25;
 }
 

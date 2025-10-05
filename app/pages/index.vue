@@ -5,21 +5,25 @@ import LocationItem from "~/components/LocationItem.vue";
 </script>
 
 <template>
-	<div class="h-screen overflow-y-auto p-5 gap-5 flex flex-col pb-20">
+	<div
+		class="h-screen overflow-y-auto p-5 gap-5 bg-[#F9F6EA] flex flex-col pb-20"
+	>
 		<h1 class="text-2xl font-bold text-black">
 			Travel Quest - (HackYeah 2025)
 		</h1>
-		<div class="flex flex-col gap-5">
-			<LocationItem
-				v-for="(item, index) in questLocations"
-				:key="index"
-				:location="{
-					name: item.name,
-					hint: item.hint,
-					index: index,
-				}"
-			/>
-		</div>
+		<ClientOnly>
+			<div class="flex flex-col gap-5">
+				<LocationItem
+					v-for="(item, index) in questLocations"
+					:key="index"
+					:location="{
+						name: item.name,
+						hint: item.hint,
+						index: index,
+					}"
+				/>
+			</div>
+		</ClientOnly>
 	</div>
 	<div class="fixed bottom-0 left-0 right-0 m-4">
 		<NuxtLink

@@ -343,7 +343,7 @@ const goBack = () => {
 						</div>
 						<button
 							type="button"
-							@click=""
+							@click="showResultOverlay = false"
 							class="mt-4 bg-[#AF9F78] border border-white/25 rounded-xl text-white font-bold text-base items-center justify-center h-11 w-full px-4 gap-2"
 							:style="{
 								boxShadow: '0px 2px 0px #90815D',

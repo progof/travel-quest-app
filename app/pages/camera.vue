@@ -165,7 +165,7 @@ const takePhoto = async () => {
 			matchLocation(blob);
 		},
 		"image/webp",
-		0.75
+		0.85
 	);
 };
 
@@ -176,7 +176,12 @@ const goBack = () => {
 
 <template>
 	<div
-		class="relative w-full h-screen bg-black flex flex-col overflow-auto md:overflow-hidden"
+		class="relative w-full h-screen bg-black flex flex-col overflow-hidden"
+		style="
+			overscroll-behavior: none;
+			-webkit-overflow-scrolling: auto;
+			touch-action: none;
+		"
 	>
 		<video
 			ref="videoRef"
@@ -186,11 +191,13 @@ const goBack = () => {
 		></video>
 
 		<div
-			class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 to-transparent"
+			class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent"
+			style="height: calc(10rem + env(safe-area-inset-bottom))"
 		></div>
 
 		<div
-			class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex items-center justify-center"
+			class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center"
+			style="bottom: calc(2.5rem + env(safe-area-inset-bottom))"
 		>
 			<button
 				@click="takePhoto"
@@ -200,14 +207,16 @@ const goBack = () => {
 
 		<button
 			@click="goBack"
-			class="absolute bottom-10 left-6 z-50 bg-white/10 text-white p-4 rounded-full backdrop-blur-md hover:bg-white/20 hover:text-white transition"
+			class="absolute left-6 z-50 bg-white/10 text-white p-4 rounded-full backdrop-blur-md hover:bg-white/20 hover:text-white transition"
+			style="bottom: calc(2.5rem + env(safe-area-inset-bottom))"
 		>
 			<CompasIcon class="w-6 h-6" />
 		</button>
 
 		<button
 			@click="toggleFacingMode"
-			class="absolute bottom-10 right-6 z-50 bg-white/10 text-white p-4 rounded-full backdrop-blur-md hover:bg-white/20 hover:text-white transition"
+			class="absolute right-6 z-50 bg-white/10 text-white p-4 rounded-full backdrop-blur-md hover:bg-white/20 hover:text-white transition"
+			style="bottom: calc(2.5rem + env(safe-area-inset-bottom))"
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -237,69 +246,67 @@ const goBack = () => {
 			</div>
 		</transition> -->
 
-		<!-- Captured Image Overlay with Scanner Animation -->
-		<transition name="fade">
-			<div
-				v-if="isPending"
-				class="absolute inset-0 bg-black/70 backdrop-blur-sm z-40 flex flex-col items-center justify-center"
-			>
-				<!-- Captured Image Preview -->
-				<div
-					class="relative mb-6 rounded-lg overflow-hidden shadow-2xl border-2 border-white/30"
-				>
-					<div v-if="capturedImageData" class="relative">
-						<img
-							:src="capturedImageData"
-							class="w-64 h-48 object-cover"
-							alt="Captured photo"
-						/>
-					</div>
-					<div
-						v-else
-						class="w-64 h-48 bg-gray-800 flex items-center justify-center"
-					>
-						<p class="text-white/70">Processing image...</p>
-					</div>
-
-					<div class="absolute inset-0 laser-scanner">
-						<div class="scanner-corners">
-							<div class="corner corner-tl"></div>
-							<div class="corner corner-tr"></div>
-							<div class="corner corner-bl"></div>
-							<div class="corner corner-br"></div>
-						</div>
-						<div class="laser-line"></div>
-					</div>
-				</div>
-
-				<div
-					class="bg-white/90 backdrop-blur-md rounded-lg p-4 text-center shadow-xl"
-				>
-					<div class="flex items-center justify-center gap-3 mb-2">
-						<div
-							class="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full"
-						></div>
-						<p class="text-gray-800 font-medium">Scanning for clues...</p>
-					</div>
-					<p class="text-gray-600 text-sm">Analyzing location details</p>
-				</div>
-			</div>
-		</transition>
-
 		<div
 			class="fixed inset-0 w-full h-screen flex items-center justify-center pointer-events-none"
 		>
 			<transition name="fade">
 				<div
-					v-if="showResultOverlay"
+					v-if="isPending || showResultOverlay"
 					class="bg-black/50 backdrop-blur-2xl fixed w-full h-screen pointer-events-auto z-10"
-					@click="showResultOverlay = false"
+					@click="
+						showResultOverlay === true ? (showResultOverlay = false) : undefined
+					"
 				></div>
 			</transition>
 			<div class="p-5 z-50 w-full">
 				<transition name="slide-up">
 					<div
-						v-if="showResultOverlay && matchResult"
+						v-if="isPending"
+						class="absolute inset-0 bg-black/70 backdrop-blur-sm z-40 flex flex-col items-center justify-center"
+					>
+						<!-- Captured Image Preview -->
+						<div
+							class="relative mb-6 rounded-lg overflow-hidden shadow-2xl border-2 border-white/30"
+						>
+							<div v-if="capturedImageData" class="relative">
+								<img
+									:src="capturedImageData"
+									class="w-64 h-48 object-cover"
+									alt="Captured photo"
+								/>
+							</div>
+							<div
+								v-else
+								class="w-64 h-48 bg-gray-800 flex items-center justify-center"
+							>
+								<p class="text-white/70">Processing image...</p>
+							</div>
+
+							<div class="absolute inset-0 laser-scanner">
+								<div class="scanner-corners">
+									<div class="corner corner-tl"></div>
+									<div class="corner corner-tr"></div>
+									<div class="corner corner-bl"></div>
+									<div class="corner corner-br"></div>
+								</div>
+								<div class="laser-line"></div>
+							</div>
+						</div>
+
+						<div
+							class="bg-white/90 backdrop-blur-md rounded-lg p-4 text-center shadow-xl"
+						>
+							<div class="flex items-center justify-center gap-3 mb-2">
+								<div
+									class="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full"
+								></div>
+								<p class="text-gray-800 font-medium">Scanning for clues...</p>
+							</div>
+							<p class="text-gray-600 text-sm">Analyzing location details</p>
+						</div>
+					</div>
+					<div
+						v-else-if="showResultOverlay && matchResult"
 						class="flex flex-col w-full items-center justify-center gap-5"
 					>
 						<div v-if="capturedImageData" class="relative">
